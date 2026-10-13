@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { PointerEvent as ReactPointerEvent } from 'react'
 import { Camera, HelpCircle, MessagesSquare, SettingsIcon, X } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
@@ -31,10 +32,44 @@ export function AppHeader({ mode }: { mode: AppMode }) {
   const elapsed = useElapsed()
   const setDurationMs = useSolutionStore((state) => state.setDurationMs)
   const [appVersion, setAppVersion] = useState('')
+  const isDragging = useRef(false)
 
   useEffect(() => {
     window.api.getAppVersion().then(setAppVersion)
   }, [])
+
+  // Dragging the window from here, rather than a native `-webkit-app-region: drag`
+  // region, keeps a transparent frameless window following the cursor instead of a
+  // ghost outline. Main polls the cursor and moves the window until we say stop;
+  // the cursor itself stays the plain arrow throughout (see the global rule in main.css).
+  useEffect(() => {
+    const stop = () => {
+      if (!isDragging.current) return
+      isDragging.current = false
+      window.api.stopWindowDrag()
+    }
+    // The header cannot be trusted to see the release: the pointer leaves it as
+    // the window moves, so end the drag from the widest listeners we have
+    window.addEventListener('pointerup', stop)
+    window.addEventListener('pointercancel', stop)
+    window.addEventListener('blur', stop)
+    return () => {
+      window.removeEventListener('pointerup', stop)
+      window.removeEventListener('pointercancel', stop)
+      window.removeEventListener('blur', stop)
+      stop()
+    }
+  }, [])
+
+  const startDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || isDragging.current) return
+    // A press on a control belongs to the control, not to the window move
+    const target = event.target as HTMLElement
+    if (target.closest('button, input, select, textarea, a')) return
+    isDragging.current = true
+    event.preventDefault()
+    window.api.startWindowDrag()
+  }
 
   useEffect(() => {
     // Main measures the request and reports once, so nothing ticks here
@@ -45,7 +80,7 @@ export function AppHeader({ mode }: { mode: AppMode }) {
   }, [setDurationMs])
 
   return (
-    <div id="app-header" className="flex items-center gap-1">
+    <div id="app-header" className="flex items-center gap-1" onPointerDown={startDrag}>
       {/*
         Flex shrink decides what survives a narrow window. The higher the
         factor, the sooner that item is squeezed, and it disappears once it
@@ -68,7 +103,7 @@ export function AppHeader({ mode }: { mode: AppMode }) {
         {update && (
           // Details and the download are on the help page
           <button
-            className="shrink-0 cursor-pointer rounded-sm bg-emerald-600 px-1 text-[10px] leading-4 text-white [-webkit-app-region:no-drag] hover:bg-emerald-500"
+            className="shrink-0 cursor-pointer rounded-sm bg-emerald-600 px-1 text-[10px] leading-4 text-white hover:bg-emerald-500"
             onClick={() => navigate('/help')}
           >
             有新版本

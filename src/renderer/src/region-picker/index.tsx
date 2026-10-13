@@ -114,7 +114,7 @@ export default function RegionPicker() {
 
   return (
     <div
-      className="fixed inset-0 cursor-crosshair select-none overflow-hidden"
+      className="region-picker-root fixed inset-0 cursor-crosshair select-none overflow-hidden"
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}

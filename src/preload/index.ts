@@ -39,6 +39,11 @@ const api = {
     ipcRenderer.send('window-resize-start', direction),
   stopWindowResize: () => ipcRenderer.send('window-resize-stop'),
 
+  // Drag the window from a custom title bar instead of a native drag region,
+  // so a transparent frameless window follows the cursor rather than a ghost outline
+  startWindowDrag: () => ipcRenderer.send('window-drag-start'),
+  stopWindowDrag: () => ipcRenderer.send('window-drag-stop'),
+
   // Update app state
   updateAppState: (state: Partial<AppState>) => ipcRenderer.invoke('updateAppState', state),
   getAppState: () => ipcRenderer.invoke('getAppState') as Promise<AppState>,
